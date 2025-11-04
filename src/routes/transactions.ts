@@ -1,19 +1,18 @@
 import express, { Request, Response } from 'express';
-import { httpResponse } from '../lib/httpResponse';
-import { User } from '../models/user';
-import Transaction from '../models/transaction';
+import { httpResponse } from '../lib/httpResponse.ts';
+import { User } from '../models/user.ts';
+import Transaction from '../models/transaction.ts';
 
 const router = express.Router();
 
-//API endpoints here
 router.post('/', async (req: Request & { 
     body: { 
         amount: number; 
         description: string;
-        date: Date;
+        date?: Date;
         userId: string;
-        } 
-    }, res: Response) => {
+    } 
+}, res: Response) => {
     try {
         const { amount, description, date, userId } = req.body;
 
@@ -33,13 +32,14 @@ router.post('/', async (req: Request & {
         const transactionDoc = new Transaction({
             amount,
             description,
-            date,
-            user: userDoc._id
+            date: date || new Date(),
+            userId: userDoc._id
         });
 
         await transactionDoc.save();
 
-        userDoc.balance += amount;
+        // Update user balance
+        userDoc.balance =   (userDoc.balance || 0) + amount;
         await userDoc.save();
 
         return httpResponse(res, 201, 'Transaction created successfully', {
@@ -48,11 +48,10 @@ router.post('/', async (req: Request & {
                 amount: transactionDoc.amount,
                 description: transactionDoc.description,
                 date: transactionDoc.date,
-
             }
         });
 
-        } catch (error) {
+    } catch (error) {
         return httpResponse(res, 500, 'Internal Server Error', {});
     }
 });
